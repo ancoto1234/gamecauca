@@ -1,8 +1,11 @@
 # depslib dependency file v1.0
-1742918806 source:c:\users\dell\desktop\sdl2\main.cpp
+1742923116 source:c:\users\dell\desktop\sdl2\main.cpp
 	<SDL.h>
 	<SDL_image.h>
 	<iostream>
+	<vector>
+	<cstdlib>
+	<ctime>
 
 1735757302 c:\users\dell\downloads\sdl2-2.30.11\i686-w64-mingw32\include\sdl2\sdl.h
 	"SDL_main.h"

@@ -17,8 +17,6 @@
 					<Add directory="../../Downloads/SDL2_image-2.8.5/i686-w64-mingw32/include/SDL2" />
 				</Compiler>
 				<Linker>
-					<Add option="-lmingw32 -lSDL2main -lSDL2" />
-					<Add option="-lSDL2_image" />
 					<Add directory="../../Downloads/SDL2-2.30.11/i686-w64-mingw32/lib" />
 					<Add directory="../../Downloads/SDL2_image-2.8.5/i686-w64-mingw32/lib" />
 				</Linker>
