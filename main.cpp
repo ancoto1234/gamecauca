@@ -26,8 +26,6 @@ const int OBJECT_YMAX = SCREEN_HEIGHT / 2 + 250;
 Uint32 lastSpawnTime = 0;
 Uint32 nextSpawnDelay = 1000 + rand() % 2000;
 
-Uint32 startTime; // lưu thời gian bắt đầu chương trình
-
 // cấu trúc vật thể di chuyển
 struct Fish {
     SDL_Rect rect;
@@ -36,8 +34,27 @@ struct Fish {
 
 vector<Fish> fishes;
 
+// Cấu trúc rêu
+struct Seaweed {
+    SDL_Rect rect;
+    SDL_Texture* frames[2];
+    int frameIndex = 0;
+    int frameTime = 0;
+};
+
 SDL_Texture* loadTexture(const char* path, SDL_Renderer* renderer) {
-    SDL_Texture* texture = IMG_LoadTexture(renderer, path);
+    SDL_Surface* surface = IMG_Load(path);
+    if (!surface) {
+        cout << "Lỗi load ảnh " << IMG_GetError() << endl;
+    }
+
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface);
+
+    if (!texture) {
+        cout << "Lỗi tạo texture " << SDL_GetError() << endl;
+    }
+    // SDL_Texture* texture = IMG_LoadTexture(renderer, path);
     return texture;
 }
 
@@ -64,6 +81,24 @@ void moveShip(SDL_Rect &ship, SDL_Event &event) {
 // Hàm sinh ngẫu nhiên vị trí của vật thể trong khoảng cho phép
 int getRandomY() {
     return rand() % (OBJECT_YMAX - OBJECT_YMIN + 1) + OBJECT_YMIN;
+}
+
+// Hàm chuyển động của rêu
+void loadSeaweedTextures(SDL_Renderer* renderer, Seaweed& seaweed) {
+    seaweed.frames[0] = IMG_LoadTexture(renderer, "seaweed/1.png");
+    seaweed.frames[1] = IMG_LoadTexture(renderer, "seaweed/2.png");
+}
+
+void updateSeaweed(Seaweed& seaweed) {
+    seaweed.frameTime += 1;
+    if (seaweed.frameTime > 10) {
+        seaweed.frameTime = 0;
+        seaweed.frameIndex = (seaweed.frameIndex + 1) % 2;
+    }
+}
+
+void renderSeaweed(SDL_Renderer* renderer, Seaweed& seaweed) {
+    SDL_RenderCopy(renderer, seaweed.frames[seaweed.frameIndex], NULL, &seaweed.rect);
 }
 
 void spawnFish() {
@@ -107,7 +142,6 @@ void updateFishSpawn() {
     }
 }
 
-
 int main(int argc, char* argv[]) {
 
     // Khởi tạo SDL và SDL2_image
@@ -121,15 +155,28 @@ int main(int argc, char* argv[]) {
 
     // Định nghĩa tàu
     SDL_Texture* shipTexture = loadTexture("ship.png", renderer);
-
-    // Định nghĩa vật thể
-    SDL_Texture* objectTexture = loadTexture("objects.png", renderer);
-
     SDL_Rect ship;
     ship.w = SIZE_SHIP;
     ship.h = SIZE_SHIP;
     ship.x = SCREEN_WIDTH / 2 - ship.w / 2;
     ship.y = FIXED_Y;
+
+    // Định nghĩa vật thể
+    SDL_Texture* objectTexture = loadTexture("objects.png", renderer);
+
+    // Định nghĩa nền cát
+    SDL_Texture* groundTexture = loadTexture("background.png", renderer);
+    SDL_Rect groundRect;
+    groundRect.x = 0;
+    groundRect.y = SCREEN_HEIGHT + 200;
+    groundRect.h = 1024;
+    groundRect.w = 1024;
+
+    // Định nghĩa rêu
+    Seaweed seaweed;
+    seaweed.rect = {230, 195, 100, 100};
+    loadSeaweedTextures(renderer, seaweed);
+
 
     // Vòng lặp game
     bool running = true;
@@ -148,10 +195,17 @@ int main(int argc, char* argv[]) {
 
         updateFishSpawn();
         updateFishes();
+        updateSeaweed(seaweed);
 
         // Vẽ màn hình
         SDL_SetRenderDrawColor(renderer, 0, 255, 255, 255);
         SDL_RenderClear(renderer);
+
+        //Vẽ rêu
+        renderSeaweed(renderer, seaweed);
+
+        //Vẽ nền cát
+        SDL_RenderCopy(renderer, groundTexture, NULL, NULL);
 
         // Vẽ con tàu, cho tàu xoay theo hướng di chuyển
         SDL_RenderCopyEx(renderer, shipTexture, NULL, &ship, 0, NULL,
@@ -169,6 +223,7 @@ int main(int argc, char* argv[]) {
 
     // Dọn dẹp tài nguyên
     SDL_DestroyTexture(shipTexture);
+    SDL_DestroyTexture(groundTexture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     IMG_Quit();
