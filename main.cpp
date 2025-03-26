@@ -8,8 +8,8 @@
 using namespace std;
 
 // Kích thước khung hình
-const int SCREEN_WIDTH = 900;
-const int SCREEN_HEIGHT = 600;
+const int SCREEN_WIDTH = 1280;
+const int SCREEN_HEIGHT = 720;
 // Đường ngang cố định
 const int FIXED_Y = SCREEN_HEIGHT / 2 - 180;
 
@@ -19,7 +19,7 @@ const int SIZE_SHIP = 120;
 bool facingRight = true;
 
 // Định nghĩa tính chất vật thể
-const int OBJECT_SPEED = 3;
+const int OBJECT_SPEED = 2;
 const int OBJECT_YMIN = SCREEN_HEIGHT / 2;
 const int OBJECT_YMAX = SCREEN_HEIGHT / 2 + 250;
 
@@ -44,17 +44,10 @@ struct Seaweed {
 
 SDL_Texture* loadTexture(const char* path, SDL_Renderer* renderer) {
     SDL_Surface* surface = IMG_Load(path);
-    if (!surface) {
-        cout << "Lỗi load ảnh " << IMG_GetError() << endl;
-    }
 
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
 
-    if (!texture) {
-        cout << "Lỗi tạo texture " << SDL_GetError() << endl;
-    }
-    // SDL_Texture* texture = IMG_LoadTexture(renderer, path);
     return texture;
 }
 
@@ -84,9 +77,19 @@ int getRandomY() {
 }
 
 // Hàm chuyển động của rêu
-void loadSeaweedTextures(SDL_Renderer* renderer, Seaweed& seaweed) {
+void loadSeaweedTextures1(SDL_Renderer* renderer, Seaweed& seaweed) {
     seaweed.frames[0] = IMG_LoadTexture(renderer, "seaweed/1.png");
     seaweed.frames[1] = IMG_LoadTexture(renderer, "seaweed/2.png");
+}
+
+void loadSeaweedTextures2(SDL_Renderer* renderer, Seaweed& seaweed) {
+    seaweed.frames[0] = IMG_LoadTexture(renderer, "seaweed2/1.png");
+    seaweed.frames[1] = IMG_LoadTexture(renderer, "seaweed2/2.png");
+}
+
+void loadSeaweedTextures3(SDL_Renderer* renderer, Seaweed& seaweed) {
+    seaweed.frames[0] = IMG_LoadTexture(renderer, "seaweed3/1.png");
+    seaweed.frames[1] = IMG_LoadTexture(renderer, "seaweed3/2.png");
 }
 
 void updateSeaweed(Seaweed& seaweed) {
@@ -103,8 +106,8 @@ void renderSeaweed(SDL_Renderer* renderer, Seaweed& seaweed) {
 
 void spawnFish() {
     Fish fish;
-    fish.rect.w = 50;
-    fish.rect.h = 50;
+    fish.rect.w = 70;
+    fish.rect.h = 70;
     fish.rect.y = getRandomY();
 
     if (rand() % 2 == 0) {
@@ -173,10 +176,17 @@ int main(int argc, char* argv[]) {
     groundRect.w = 1024;
 
     // Định nghĩa rêu
-    Seaweed seaweed;
-    seaweed.rect = {230, 195, 100, 100};
-    loadSeaweedTextures(renderer, seaweed);
+    Seaweed seaweed1;
+    seaweed1.rect = {330, 390, 140, 140};
+    loadSeaweedTextures1(renderer, seaweed1);
 
+    Seaweed seaweed2;
+    seaweed2.rect = {888, 380, 140, 140};
+    loadSeaweedTextures2(renderer, seaweed2);
+
+    Seaweed seaweed3;
+    seaweed3.rect = {370, 390, 140, 140};
+    loadSeaweedTextures3(renderer, seaweed3);
 
     // Vòng lặp game
     bool running = true;
@@ -195,14 +205,19 @@ int main(int argc, char* argv[]) {
 
         updateFishSpawn();
         updateFishes();
-        updateSeaweed(seaweed);
+        updateSeaweed(seaweed1);
+        updateSeaweed(seaweed2);
+        updateSeaweed(seaweed3);
+
 
         // Vẽ màn hình
         SDL_SetRenderDrawColor(renderer, 0, 255, 255, 255);
         SDL_RenderClear(renderer);
 
         //Vẽ rêu
-        renderSeaweed(renderer, seaweed);
+        renderSeaweed(renderer, seaweed1);
+        renderSeaweed(renderer, seaweed2);
+        renderSeaweed(renderer, seaweed3);
 
         //Vẽ nền cát
         SDL_RenderCopy(renderer, groundTexture, NULL, NULL);

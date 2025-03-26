@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1743016064 source:c:\users\dell\desktop\sdl2\main.cpp
+1743021730 source:c:\users\dell\desktop\sdl2\main.cpp
 	<SDL.h>
 	<SDL_image.h>
 	<iostream>
