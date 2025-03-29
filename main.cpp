@@ -11,10 +11,10 @@ using namespace std;
 const int SCREEN_WIDTH = 1280;
 const int SCREEN_HEIGHT = 720;
 // Đường ngang cố định
-const int FIXED_Y = SCREEN_HEIGHT / 2 - 180;
+const int FIXED_Y = SCREEN_HEIGHT / 2 - 330;
 
 // Kích thước con tàu
-const int SIZE_SHIP = 120;
+const int SIZE_SHIP = 250;
 // Trạng thái hướng của con tàu
 bool facingRight = true;
 
@@ -170,10 +170,19 @@ int main(int argc, char* argv[]) {
     // Định nghĩa nền cát
     SDL_Texture* groundTexture = loadTexture("background.png", renderer);
     SDL_Rect groundRect;
-    groundRect.x = 0;
-    groundRect.y = SCREEN_HEIGHT + 200;
-    groundRect.h = 1024;
-    groundRect.w = 1024;
+
+    // Định nghĩa nước
+    SDL_Texture* seaTexture = loadTexture("sea.png", renderer);
+    SDL_Rect seaRect;
+
+    // Định nghĩa đá
+    SDL_Texture* Stone1 = loadTexture("stone1.png", renderer);
+    SDL_Texture* Stone2 = loadTexture("stone2.png", renderer);
+
+    SDL_Rect Stone2Rect = {300,500,140,140};
+    SDL_Rect Stone1Rect = {350,510,140,140};
+
+
 
     // Định nghĩa rêu
     Seaweed seaweed1;
@@ -188,6 +197,7 @@ int main(int argc, char* argv[]) {
     seaweed3.rect = {370, 390, 140, 140};
     loadSeaweedTextures3(renderer, seaweed3);
 
+
     // Vòng lặp game
     bool running = true;
     SDL_Event event;
@@ -201,6 +211,7 @@ int main(int argc, char* argv[]) {
             if (event.type == SDL_KEYDOWN) {
                 moveShip(ship, event);
             }
+
         }
 
         updateFishSpawn();
@@ -209,10 +220,12 @@ int main(int argc, char* argv[]) {
         updateSeaweed(seaweed2);
         updateSeaweed(seaweed3);
 
-
         // Vẽ màn hình
         SDL_SetRenderDrawColor(renderer, 0, 255, 255, 255);
         SDL_RenderClear(renderer);
+
+        //Vẽ nước
+        SDL_RenderCopy(renderer, seaTexture, NULL, NULL);
 
         //Vẽ rêu
         renderSeaweed(renderer, seaweed1);
@@ -221,6 +234,11 @@ int main(int argc, char* argv[]) {
 
         //Vẽ nền cát
         SDL_RenderCopy(renderer, groundTexture, NULL, NULL);
+
+        // Vẽ đá
+        SDL_RenderCopy(renderer, Stone2, NULL, &Stone2Rect);
+        SDL_RenderCopy(renderer, Stone1, NULL, &Stone1Rect);
+
 
         // Vẽ con tàu, cho tàu xoay theo hướng di chuyển
         SDL_RenderCopyEx(renderer, shipTexture, NULL, &ship, 0, NULL,
