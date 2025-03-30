@@ -1,3 +1,4 @@
+
 #include <SDL.h>
 #include <SDL_image.h>
 #include <iostream>
@@ -7,18 +8,14 @@
 
 using namespace std;
 
-SDL_Window* window = nullptr;
-SDL_Renderer* renderer = nullptr;  // Thêm dòng này
-
-
 // Kích thước khung hình
 const int SCREEN_WIDTH = 1280;
 const int SCREEN_HEIGHT = 720;
 // Đường ngang cố định
-int FIXED_Y = SCREEN_HEIGHT / 2 - 330;
+const int FIXED_Y = SCREEN_HEIGHT / 2 - 180;
 
 // Kích thước con tàu
-const int SIZE_SHIP = 250;
+const int SIZE_SHIP = 120;
 // Trạng thái hướng của con tàu
 bool facingRight = true;
 
@@ -36,9 +33,6 @@ struct Fish {
     bool moveRight;
 };
 
-// Tính điểm
-int Score = 0;
-
 vector<Fish> fishes;
 
 // Cấu trúc rêu
@@ -49,24 +43,21 @@ struct Seaweed {
     int frameTime = 0;
 };
 
-// Cấu trúc móc kéo
-struct Rod{
-    SDL_Rect rect;
-    int length = 0;
-    bool isCasting;
-    bool isRetracting;
-    Fish* hookedFish = nullptr; // con cá bị móc vào
+// Cấu trúc người đi câu
+struct Fisherman {
+    int x,y;
+    SDL_Texture* texture;
 };
 
-bool checkCollision(SDL_Rect a, SDL_Rect b) {
-    return (a.x < b.x + b.w && a.x + a.w > b.x
-            && a.y < b.y + b.h && a.y + a.h > b.y);
-}
 
-// Hàm sinh ngẫu nhiên vị trí của vật thể trong khoảng cho phép
-int getRandomY() {
-    return rand() % (OBJECT_YMAX - OBJECT_YMIN + 1) + OBJECT_YMIN;
-}
+
+// Cấu trúc cần câu
+struct FishingRod {
+    int x,y;     // Toạ độ đầu lưỡi câu
+    int length;  // Độ dài cần câu
+    bool isCasting; // Đang thả câu hay không
+    SDL_Texture* texture;
+};
 
 SDL_Texture* loadTexture(const char* path, SDL_Renderer* renderer) {
     SDL_Surface* surface = IMG_Load(path);
@@ -77,79 +68,30 @@ SDL_Texture* loadTexture(const char* path, SDL_Renderer* renderer) {
     return texture;
 }
 
-void updateRod(Rod &rod) {
-    if (rod.isCasting) {
-        if (rod.length < 460) {
-            rod.rect.y += 6;
-            rod.length += 6;
-
-            // Kiểm tra va trạm với cá
-            for (auto &fish : fishes) {
-                if (checkCollision({rod.rect.x + 15, rod.rect.y, 10, 10}, fish.rect)) {
-                    rod.hookedFish = &fish;
-                    rod.isCasting = false;
-                    rod.isRetracting = true;
-                    break;
-                }
-            }
-        } else {
-            rod.isCasting = false;
-            rod.isRetracting = true;
-        }
-    }
-    else if (rod.isRetracting) {
-        if (rod.length > 1) {
-            rod.rect.y -= 9;
-            rod.length -= 9;
-
-            if (rod.hookedFish) {
-                rod.hookedFish->rect.y = rod.rect.y;
-                rod.hookedFish->rect.x = rod.rect.x;
-            }
-        } else {
-            rod.isRetracting = false;
-
-            if (rod.hookedFish) {
-                Score += 10;
-                rod.hookedFish->rect.x = (rand() & 2)? 0 : SCREEN_WIDTH;
-                rod.hookedFish->rect.y = getRandomY();
-                rod.hookedFish->moveRight = rand() % 2;
-                rod.hookedFish = nullptr;
-            }
-        }
-    }
-
-}
-
-SDL_Texture* numberTextures[10]; // Mảng lưu texture của số 0-9
-int digitWidth = 100;  // Kích thước ảnh số
-int digitHeight = 100;
-
-
-void moveShip(SDL_Rect &ship, SDL_Event &event, Rod &rod) {
-    if (rod.isCasting || rod.isRetracting) return;
+void moveShip(SDL_Rect &ship, SDL_Event &event) {
     const int speed = 10;
     switch (event.key.keysym.sym) {
+        //case SDLK_UP:
+        //    if (rect.y - speed >= 0) rect.y -= speed;
+        //    break;
+        //case SDLK_DOWN:
+        //    if (rect.y + speed <= SCREEN_HEIGHT - RECT_SIZE) rect.y += speed;
+        //    break;
         case SDLK_LEFT:
-            if (ship.x - speed >= 0) {
-                ship.x -= speed;
-                rod.rect.x -= speed;
-            }
+            if (ship.x - speed >= 0) ship.x -= speed;
             facingRight = false;
             break;
         case SDLK_RIGHT:
-            if (ship.x + speed <= SCREEN_WIDTH - ship.w) {
-                ship.x += speed;
-                rod.rect.x += speed;
-            }
+            if (ship.x + speed <= SCREEN_WIDTH - ship.w) ship.x += speed;
             facingRight = true;
             break;
     }
 }
 
-
-
-
+// Hàm sinh ngẫu nhiên vị trí của vật thể trong khoảng cho phép
+int getRandomY() {
+    return rand() % (OBJECT_YMAX - OBJECT_YMIN + 1) + OBJECT_YMIN;
+}
 
 // Hàm chuyển động của rêu
 void loadSeaweedTextures1(SDL_Renderer* renderer, Seaweed& seaweed) {
@@ -181,8 +123,8 @@ void renderSeaweed(SDL_Renderer* renderer, Seaweed& seaweed) {
 
 void spawnFish() {
     Fish fish;
-    fish.rect.w = 50;
-    fish.rect.h = 50;
+    fish.rect.w = 70;
+    fish.rect.h = 70;
     fish.rect.y = getRandomY();
 
     if (rand() % 2 == 0) {
@@ -220,6 +162,25 @@ void updateFishSpawn() {
     }
 }
 
+
+// Di chuyển lưỡi câu xuống khi thả
+void updateRod(FishingRod rod) {
+    if (rod.isCasting) {
+        rod.y += 5;
+        rod.length += 5;
+
+        // giới hạn độ dài tối đa
+    if (rod.length > 200) {
+        rod.isCasting = false;
+        }
+    } else {
+        if (rod.length > 50) {
+            rod.y -= 5;
+            rod.length -= 5;
+        }
+    }
+}
+
 int main(int argc, char* argv[]) {
 
     // Khởi tạo SDL và SDL2_image
@@ -239,15 +200,6 @@ int main(int argc, char* argv[]) {
     ship.x = SCREEN_WIDTH / 2 - ship.w / 2;
     ship.y = FIXED_Y;
 
-    // Đinh nghĩa móc kéo
-    SDL_Texture* rodTexture = loadTexture("moc.png", renderer);
-    Rod rod;
-    rod.rect.y = FIXED_Y + 165;
-    rod.rect.x = SCREEN_WIDTH / 2 - ship.w / 2 + 90;
-    rod.rect.h = 50;
-    rod.rect.w = 50;
-
-
     // Định nghĩa vật thể
     SDL_Texture* objectTexture = loadTexture("objects.png", renderer);
 
@@ -266,11 +218,7 @@ int main(int argc, char* argv[]) {
     SDL_Rect Stone2Rect = {300,500,140,140};
     SDL_Rect Stone1Rect = {350,510,140,140};
 
-    // Tải hình ảnh điểm số
-    for (int i = 0; i < 10; i++) {
-        string path = "numbers/" + to_string(i) + ".png"; // Ví dụ: "numbers/0.png"
-        numberTextures[i] = loadTexture(path.c_str(), renderer);
-    }
+
 
     // Định nghĩa rêu
     Seaweed seaweed1;
@@ -285,6 +233,17 @@ int main(int argc, char* argv[]) {
     seaweed3.rect = {370, 390, 140, 140};
     loadSeaweedTextures3(renderer, seaweed3);
 
+    // Định nghĩa người câu
+    Fisherman fisherman = {400, 50, NULL};
+    fisherman.texture = IMG_LoadTexture(renderer, "fisherman.png");
+    SDL_Rect rect = {fisherman.x, fisherman.y, 50, 100};
+    SDL_RenderCopy(renderer, fisherman.texture, NULL, &rect);
+
+    // Định nghĩa cần câu
+    FishingRod rod = {410, 100, 50, false, NULL};
+    rod.texture = IMG_LoadTexture(renderer, "fisingrod.png");
+    SDL_Rect rodRect = {rod.x, rod.y, 10, rod.length};
+    SDL_RenderCopy(renderer, rod.texture, NULL, &rodRect);
 
     // Vòng lặp game
     bool running = true;
@@ -297,21 +256,24 @@ int main(int argc, char* argv[]) {
             }
 
             if (event.type == SDL_KEYDOWN) {
-                moveShip(ship, event, rod);
-                if (event.key.keysym.sym == SDLK_SPACE && !rod.isCasting && !rod.isRetracting) {
+                moveShip(ship, event);
+            }
+
+            if (event.type == SDL_KEYDOWN) {
+                if (event.key.keysym.sym == SDLK_SPACE) {
                     rod.isCasting = true;
                 }
             }
         }
-
-
 
         updateFishSpawn();
         updateFishes();
         updateSeaweed(seaweed1);
         updateSeaweed(seaweed2);
         updateSeaweed(seaweed3);
+
         updateRod(rod);
+
 
         // Vẽ màn hình
         SDL_SetRenderDrawColor(renderer, 0, 255, 255, 255);
@@ -332,26 +294,14 @@ int main(int argc, char* argv[]) {
         SDL_RenderCopy(renderer, Stone2, NULL, &Stone2Rect);
         SDL_RenderCopy(renderer, Stone1, NULL, &Stone1Rect);
 
-        // Vẽ móc
-        SDL_RenderCopy(renderer, rodTexture, NULL, &rod.rect);
 
-        cout << Score << endl;
         // Vẽ con tàu, cho tàu xoay theo hướng di chuyển
-        SDL_RenderCopyEx(renderer, shipTexture, NULL, &ship, 0, NULL,
-                         facingRight ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
-
+        //SDL_RenderCopyEx(renderer, shipTexture, NULL, &ship, 0, NULL,
+        //                 facingRight ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
         // vẽ cá
         for (const auto &fish : fishes) {
             SDL_RenderCopyEx(renderer, objectTexture, NULL, &fish.rect, 0, NULL,
                              fish.moveRight ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL);
-        }
-
-        string scoreStr = to_string(Score);
-
-        for (size_t i = 0; i < scoreStr.size(); i++) {
-            int digit = scoreStr[i] - '0';
-            SDL_Rect destRect = {50 + i * (digitWidth+20)/2, 50, digitWidth, digitHeight};
-            SDL_RenderCopy(renderer, numberTextures[digit], NULL, &destRect);
         }
 
         // Hiển thị buffer
