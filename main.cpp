@@ -1,6 +1,6 @@
 #include <SDL.h>
 #include <SDL_image.h>
-#include <SDL_ttf.h>
+#include <SDL_mixer.h>
 #include <iostream>
 #include <vector>
 #include <cstdlib>
@@ -35,6 +35,8 @@ Uint32 nextSpawnDelay = 1000 + rand() % 2000;
 
 Uint32 startTime;
 Uint32 timeLeft = 30;
+
+Mix_Chunk* catchSound = Mix_LoadWAV("point_bonus.wav");
 
 // cấu trúc vật thể di chuyển
 struct Fish {
@@ -85,6 +87,8 @@ SDL_Texture* loadTexture(const char* path, SDL_Renderer* renderer) {
 }
 
 // Cập nhật móc kéo
+
+
 void updateRod(Rod &rod) {
     if (rod.isCasting) {
         if (rod.length < 460) {
@@ -120,9 +124,11 @@ void updateRod(Rod &rod) {
             if (rod.hookedFish) {
                 Score += 10;
                 timeLeft += 2;
-                rod.hookedFish->rect.x = (rand() & 2)? 0 : SCREEN_WIDTH;
+
+                bool check = rand() % 2;
+                rod.hookedFish->rect.x = (check)? 0 : SCREEN_WIDTH;
                 rod.hookedFish->rect.y = getRandomY();
-                rod.hookedFish->moveRight = rand() % 2;
+                rod.hookedFish->moveRight = (check)? true : false;
                 rod.hookedFish = nullptr;
             }
         }
@@ -242,7 +248,6 @@ void handleMenuEvent(SDL_Event &event) {
     if (event.type == SDL_MOUSEBUTTONDOWN) {
         if (mouseX >= startButtonRect.x && mouseX <= startButtonRect.x + startButtonRect.w &&
             mouseY >= startButtonRect.y && mouseY <= startButtonRect.y + startButtonRect.h) {
-            cout << 111;
             isMenu = false;  // Bắt đầu game
         }
 
@@ -262,6 +267,10 @@ int main(int argc, char* argv[]) {
     IMG_Init(IMG_INIT_PNG);
     srand(time(0));
 
+    Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024);
+    Mix_Volume(-1,MIX_MAX_VOLUME);
+
+
     // Định nghĩa tàu
     SDL_Texture* shipTexture = loadTexture("ship.png", renderer);
     SDL_Rect ship;
@@ -279,7 +288,7 @@ int main(int argc, char* argv[]) {
     rod.rect.w = 50;
 
 
-    // Định nghĩa vật thể
+    // Định nghĩa cá
     SDL_Texture* objectTexture = loadTexture("objects.png", renderer);
 
     // Định nghĩa nền cát
@@ -316,8 +325,6 @@ int main(int argc, char* argv[]) {
     seaweed3.rect = {370, 390, 140, 140};
     loadSeaweedTextures3(renderer, seaweed3);
 
-    // cập nhật thời gian đếm
-    startTime = SDL_GetTicks();
 
     SDL_Texture* menuBackgroundTexture = loadTexture("menu_background.png", renderer);
     SDL_Texture* startButtonTexture = loadTexture("start_button.png", renderer);
@@ -329,6 +336,15 @@ int main(int argc, char* argv[]) {
 
     SDL_Texture* endBGTexture = loadTexture("endbackground.png", renderer);
     SDL_Rect endgroundRect = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
+
+    // Am thanh
+    Mix_Chunk* catchSound = Mix_LoadWAV("point_bonus.wav");
+    Mix_Chunk* gameoverSound = Mix_LoadWAV("game_over.wav");
+    bool hasPlaySound = false;
+
+    // cập nhật thời gian đếm
+    startTime = SDL_GetTicks();
+
 
     // Vòng lặp game
     bool running = true;
@@ -349,6 +365,7 @@ int main(int argc, char* argv[]) {
                     timeLeft = 30;
                     Score = 0;
                     isGameOver = false;
+                    hasPlaySound = false;
                 }
 
                 if (event.key.keysym.sym == SDLK_ESCAPE) {
@@ -360,6 +377,7 @@ int main(int argc, char* argv[]) {
                 moveShip(ship, event, rod);
                 if (event.key.keysym.sym == SDLK_SPACE && !rod.isCasting && !rod.isRetracting) {
                     rod.isCasting = true;
+
                 }
             }
         }
@@ -369,17 +387,24 @@ int main(int argc, char* argv[]) {
             SDL_RenderCopy(renderer, startButtonTexture, NULL, &startButtonRect);
             SDL_RenderCopy(renderer, exitButtonTexture, NULL, &exitButtonRect);
 
+
+
             SDL_RenderPresent(renderer);
 
         } else if (isGameOver) {
             // Vẽ chữ Game Over
             SDL_RenderCopy(renderer, endBGTexture, NULL, &endgroundRect);
 
+            if (!Mix_Playing(-1) && !hasPlaySound) {
+                    Mix_PlayChannel(-1,gameoverSound,0);
+                    hasPlaySound = true;
+            }
+
             string scoreStr = to_string(Score);
 
             for (size_t i = 0; i < scoreStr.size(); i++) {
                 int digit = scoreStr[i] - '0';
-                SDL_Rect destRect = {600 + i * (digitWidth+20)/2, 335,  150, 150};
+                SDL_Rect destRect = {600 + i * (170)/2, 335,  150, 150};
                 SDL_RenderCopy(renderer, numberTextures[digit], NULL, &destRect);
             }
 
@@ -421,7 +446,6 @@ int main(int argc, char* argv[]) {
             // Vẽ móc
             SDL_RenderCopy(renderer, rodTexture, NULL, &rod.rect);
 
-            cout << Score << endl;
             // Vẽ con tàu, cho tàu xoay theo hướng di chuyển
             SDL_RenderCopyEx(renderer, shipTexture, NULL, &ship, 0, NULL,
                              facingRight ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
@@ -430,6 +454,13 @@ int main(int argc, char* argv[]) {
             for (const auto &fish : fishes) {
                 SDL_RenderCopyEx(renderer, objectTexture, NULL, &fish.rect, 0, NULL,
                                  fish.moveRight ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL);
+            }
+            // Cau dc ca thi phat ra am thanh
+            if (rod.isRetracting) {
+                if (rod.hookedFish) {
+                    if (!Mix_Playing(-1)) Mix_PlayChannel(-1,catchSound,0);
+
+                }
             }
 
             string scoreStr = to_string(Score);
@@ -448,6 +479,9 @@ int main(int argc, char* argv[]) {
                 }
             }
             string timeStr = to_string(timeLeft);
+            if (timeLeft < 10) {
+                timeStr = '0' + timeStr;
+            }
             for (size_t i = 0;i < timeStr.size(); i++) {
                 int digit = timeStr[i] - '0';
                 SDL_Rect dest = {SCREEN_WIDTH - 140 + i*(digitWidth+20)/2, 20, 70, 70};
@@ -463,8 +497,14 @@ int main(int argc, char* argv[]) {
     SDL_DestroyTexture(shipTexture);
     SDL_DestroyTexture(groundTexture);
     SDL_DestroyTexture(seaTexture);
+    SDL_DestroyTexture(rodTexture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
+
+    // Giai phong am thanh
+    Mix_FreeChunk(catchSound);
+
+    Mix_CloseAudio();
     IMG_Quit();
     SDL_Quit();
 

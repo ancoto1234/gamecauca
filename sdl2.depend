@@ -1,8 +1,7 @@
 # depslib dependency file v1.0
-1743395907 source:c:\users\dell\desktop\sdl2\main.cpp
+1743498823 source:c:\users\dell\desktop\sdl2\main.cpp
 	<SDL.h>
 	<SDL_image.h>
-	<SDL_ttf.h>
 	<iostream>
 	<vector>
 	<cstdlib>
@@ -454,4 +453,6 @@
 	"SDL_version.h"
 	"begin_code.h"
 	"close_code.h"
+
+1743499878 source:c:\users\dell\desktop\sdl2\fish.cpp
 
